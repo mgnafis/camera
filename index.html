@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tes Kamera Web</title>
+    <title>Tes Kamera Web - Face Detection</title>
     <style>
         * {
             margin: 0;
@@ -41,34 +41,24 @@
             position: relative;
             background: #000;
             width: 100%;
+            overflow: hidden;
         }
 
         #video {
             width: 100%;
             height: auto;
             display: block;
-            max-height: 480px;
-            transition: transform 0.3s ease;
-        }
-
-        #video.rotate-90 {
-            transform: rotate(90deg);
-        }
-
-        #video.rotate-180 {
-            transform: rotate(180deg);
-        }
-
-        #video.rotate-270 {
             transform: rotate(270deg);
+            transform-origin: center center;
         }
 
-        #video.flip-h {
-            transform: scaleX(-1);
-        }
-
-        #video.flip-v {
-            transform: scaleY(-1);
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
         }
 
         .overlay {
@@ -82,6 +72,7 @@
             padding: 20px;
             border-radius: 8px;
             display: none;
+            z-index: 10;
         }
 
         .controls {
@@ -158,6 +149,28 @@
             cursor: not-allowed;
         }
 
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
         .info {
             background: #e3f2fd;
             padding: 10px;
@@ -206,8 +219,9 @@
             color: #0c5460;
         }
 
-        canvas {
-            display: none;
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
         }
 
         .hidden {
@@ -218,11 +232,12 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📷 Tes Kamera Web</h1>
+            <h1>📷 Kamera Web + Face Tracking</h1>
         </div>
 
         <div class="video-wrapper">
             <video id="video" autoplay playsinline muted></video>
+            <canvas id="canvas"></canvas>
             <div id="overlay" class="overlay">
                 <p>Kamera belum aktif</p>
                 <p>Tekan "Mulai Kamera"</p>
@@ -231,7 +246,12 @@
 
         <div class="controls">
             <div id="statusMsg" class="status info">
-                Tekan "Mulai Kamera" untuk memulai
+                Loading Face Detection API...
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="faceDetectionToggle" checked>
+                <label for="faceDetectionToggle">Aktifkan Deteksi Wajah</label>
             </div>
 
             <div class="form-group">
@@ -246,23 +266,11 @@
             <button id="stopBtn" class="btn-stop" disabled>⏹ Stop Kamera</button>
             <button id="captureBtn" class="btn-capture" disabled>📷 Ambil Foto</button>
 
-            <div class="form-group">
-                <label for="rotateSelect">Rotasi & Flip Layar:</label>
-                <select id="rotateSelect">
-                    <option value="normal">Normal</option>
-                    <option value="rotate-90">Putar 90°</option>
-                    <option value="rotate-180">Putar 180°</option>
-                    <option value="rotate-270">Putar 270°</option>
-                    <option value="flip-h">Flip Horizontal (Mirror)</option>
-                    <option value="flip-v">Flip Vertikal</option>
-                </select>
-            </div>
-
             <div class="info">
-                <strong>Informasi Kamera:</strong>
+                <strong>Informasi:</strong>
                 <table class="info-table">
                     <tr>
-                        <td>Status:</td>
+                        <td>Status Kamera:</td>
                         <td id="infoStatus">Tidak aktif</td>
                     </tr>
                     <tr>
@@ -270,41 +278,72 @@
                         <td id="infoResolution">-</td>
                     </tr>
                     <tr>
-                        <td>Kamera:</td>
-                        <td id="infoCamera">-</td>
+                        <td>Wajah Terdeteksi:</td>
+                        <td id="infoFaces">0</td>
+                    </tr>
+                    <tr>
+                        <td>Rotasi:</td>
+                        <td>270° (Fixed)</td>
                     </tr>
                 </table>
             </div>
         </div>
     </div>
 
-    <canvas id="canvas"></canvas>
-
     <script>
         // Variabel global
         var video = document.getElementById('video');
         var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext('2d');
         var cameraSelect = document.getElementById('cameraSelect');
-        var rotateSelect = document.getElementById('rotateSelect');
         var startBtn = document.getElementById('startBtn');
         var switchBtn = document.getElementById('switchBtn');
         var stopBtn = document.getElementById('stopBtn');
         var captureBtn = document.getElementById('captureBtn');
         var overlay = document.getElementById('overlay');
         var statusMsg = document.getElementById('statusMsg');
+        var faceDetectionToggle = document.getElementById('faceDetectionToggle');
         
         var stream = null;
         var cameras = [];
-        var currentCameraIndex = 0;
-        var facingMode = 'user'; // 'user' untuk depan, 'environment' untuk belakang
-        var currentRotation = 'normal';
+        var facingMode = 'user';
+        var faceDetector = null;
+        var detectionInterval = null;
+        var isFaceDetectionEnabled = true;
+        var isFaceDetectionSupported = false;
+
+        // Cek dukungan Face Detection API
+        function checkFaceDetectionSupport() {
+            if ('FaceDetector' in window) {
+                isFaceDetectionSupported = true;
+                showStatus('Face Detection API tersedia! ✓', 'success');
+                initFaceDetector();
+            } else {
+                isFaceDetectionSupported = false;
+                showStatus('Face Detection tidak didukung di browser ini. Gunakan Chrome/Edge yang lebih baru.', 'warning');
+                faceDetectionToggle.disabled = true;
+                faceDetectionToggle.checked = false;
+            }
+        }
+
+        // Inisialisasi Face Detector
+        function initFaceDetector() {
+            try {
+                faceDetector = new FaceDetector({
+                    maxDetectedFaces: 10,
+                    fastMode: false
+                });
+            } catch (err) {
+                console.error('Error inisialisasi Face Detector:', err);
+                showStatus('Gagal menginisialisasi Face Detector', 'error');
+            }
+        }
 
         // Cek dukungan browser
         function checkBrowserSupport() {
             var isSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
             
             if (!isSupported) {
-                // Fallback untuk browser lama
                 navigator.getUserMedia = navigator.getUserMedia ||
                     navigator.webkitGetUserMedia ||
                     navigator.mozGetUserMedia ||
@@ -323,11 +362,12 @@
             overlay.style.display = 'flex';
             
             if (!checkBrowserSupport()) {
-                showStatus('Browser Anda tidak mendukung akses kamera. Silakan gunakan browser yang lebih baru seperti Chrome, Firefox, atau Safari.', 'error');
+                showStatus('Browser Anda tidak mendukung akses kamera.', 'error');
                 startBtn.disabled = true;
                 return;
             }
             
+            checkFaceDetectionSupport();
             getCameras();
         }
 
@@ -349,7 +389,6 @@
                                 cameraSelect.appendChild(option);
                             });
                             
-                            // Tampilkan tombol switch jika ada lebih dari 1 kamera
                             if (cameras.length > 1) {
                                 switchBtn.classList.remove('hidden');
                             }
@@ -361,18 +400,17 @@
             }
         }
 
-        // Memulai kamera dengan constraints yang kompatibel
+        // Memulai kamera
         function startCamera() {
             var constraints = {
                 video: {
                     facingMode: facingMode,
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
                 },
                 audio: false
             };
 
-            // Jika ada kamera terpilih di dropdown
             if (cameras.length > 0 && cameraSelect.value !== '') {
                 var selectedIndex = parseInt(cameraSelect.value);
                 if (cameras[selectedIndex]) {
@@ -381,14 +419,12 @@
                 }
             }
 
-            // Stop stream lama jika ada
             if (stream) {
                 stream.getTracks().forEach(function(track) {
                     track.stop();
                 });
             }
 
-            // Gunakan API yang tepat sesuai browser
             var getUserMedia = (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ?
                 function(constraints) {
                     return navigator.mediaDevices.getUserMedia(constraints);
@@ -403,11 +439,9 @@
                 .then(function(mediaStream) {
                     stream = mediaStream;
                     
-                    // Set video source
                     if ('srcObject' in video) {
                         video.srcObject = stream;
                     } else {
-                        // Fallback untuk browser lama
                         video.src = window.URL.createObjectURL(stream);
                     }
                     
@@ -417,22 +451,84 @@
                         stopBtn.disabled = false;
                         captureBtn.disabled = false;
                         
-                        // Update info
+                        // Set canvas size
+                        canvas.width = video.offsetWidth;
+                        canvas.height = video.offsetHeight;
+                        
                         document.getElementById('infoStatus').textContent = 'Aktif';
                         document.getElementById('infoResolution').textContent = 
                             video.videoWidth + ' x ' + video.videoHeight;
-                        document.getElementById('infoCamera').textContent = 
-                            cameras[cameraSelect.value] ? 
-                            (cameras[cameraSelect.value].label || 'Kamera ' + (parseInt(cameraSelect.value) + 1)) : 
-                            'Kamera Default';
                         
-                        showStatus('Kamera aktif! Resolusi: ' + video.videoWidth + 'x' + video.videoHeight, 'success');
+                        showStatus('Kamera aktif! Rotasi 270° diterapkan.', 'success');
+                        
+                        // Mulai face detection
+                        if (isFaceDetectionSupported && faceDetectionToggle.checked) {
+                            startFaceDetection();
+                        }
                     };
                 })
                 .catch(function(err) {
                     console.error('Error mengakses kamera:', err);
                     overlay.style.display = 'flex';
-                    showStatus('Gagal mengakses kamera: ' + err.message + '. Pastikan Anda memberikan izin akses kamera.', 'error');
+                    showStatus('Gagal mengakses kamera: ' + err.message, 'error');
+                });
+        }
+
+        // Face Detection Loop
+        function startFaceDetection() {
+            if (!faceDetector || !isFaceDetectionEnabled) return;
+            
+            detectionInterval = setInterval(function() {
+                detectFaces();
+            }, 100); // Deteksi setiap 100ms
+        }
+
+        function stopFaceDetection() {
+            if (detectionInterval) {
+                clearInterval(detectionInterval);
+                detectionInterval = null;
+            }
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('infoFaces').textContent = '0';
+        }
+
+        // Deteksi wajah
+        function detectFaces() {
+            if (!video.videoWidth || !video.videoHeight) return;
+            
+            faceDetector.detect(video)
+                .then(function(faces) {
+                    // Clear canvas
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    document.getElementById('infoFaces').textContent = faces.length;
+                    
+                    // Gambar kotak di setiap wajah yang terdeteksi
+                    faces.forEach(function(face) {
+                        var box = face.boundingBox;
+                        
+                        // Hitung posisi untuk rotasi 270 derajat
+                        var scaleX = canvas.width / video.videoWidth;
+                        var scaleY = canvas.height / video.videoHeight;
+                        
+                        ctx.strokeStyle = '#00ff00';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(
+                            box.x * scaleX,
+                            box.y * scaleY,
+                            box.width * scaleX,
+                            box.height * scaleY
+                        );
+                        
+                        // Tambahkan label
+                        ctx.fillStyle = '#00ff00';
+                        ctx.font = '16px Arial';
+                        ctx.fillText('Wajah', box.x * scaleX, (box.y * scaleY) - 5);
+                    });
+                })
+                .catch(function(err) {
+                    console.error('Error detecting faces:', err);
                 });
         }
 
@@ -444,6 +540,8 @@
                 });
                 video.srcObject = null;
                 stream = null;
+                
+                stopFaceDetection();
                 
                 overlay.style.display = 'flex';
                 startBtn.disabled = false;
@@ -457,56 +555,28 @@
             }
         }
 
-        // Ganti kamera (untuk mobile)
+        // Ganti kamera
         function switchCamera() {
             facingMode = facingMode === 'user' ? 'environment' : 'user';
             startCamera();
         }
 
-        // Ambil foto
+        // Ambil foto dengan rotasi 270 derajat
         function capturePhoto() {
             var captureCanvas = document.createElement('canvas');
-            var rotation = currentRotation;
             
-            // Atur ukuran canvas sesuai rotasi
-            if (rotation === 'rotate-90' || rotation === 'rotate-270') {
-                captureCanvas.width = video.videoHeight;
-                captureCanvas.height = video.videoWidth;
-            } else {
-                captureCanvas.width = video.videoWidth;
-                captureCanvas.height = video.videoHeight;
-            }
+            // Untuk rotasi 270, width dan height ditukar
+            captureCanvas.width = video.videoHeight;
+            captureCanvas.height = video.videoWidth;
             
-            var ctx = captureCanvas.getContext('2d');
+            var captureCtx = captureCanvas.getContext('2d');
             
-            // Terapkan transformasi sesuai rotasi
-            ctx.save();
-            
-            if (rotation === 'rotate-90') {
-                ctx.translate(captureCanvas.width, 0);
-                ctx.rotate(90 * Math.PI / 180);
-            } else if (rotation === 'rotate-180') {
-                ctx.translate(captureCanvas.width, captureCanvas.height);
-                ctx.rotate(180 * Math.PI / 180);
-            } else if (rotation === 'rotate-270') {
-                ctx.translate(0, captureCanvas.height);
-                ctx.rotate(270 * Math.PI / 180);
-            } else if (rotation === 'flip-h') {
-                ctx.translate(captureCanvas.width, 0);
-                ctx.scale(-1, 1);
-            } else if (rotation === 'flip-v') {
-                ctx.translate(0, captureCanvas.height);
-                ctx.scale(1, -1);
-            }
-            
-            // Gambar video ke canvas
-            if (rotation === 'rotate-90' || rotation === 'rotate-270') {
-                ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-            } else {
-                ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-            }
-            
-            ctx.restore();
+            // Terapkan rotasi 270 derajat
+            captureCtx.save();
+            captureCtx.translate(0, captureCanvas.height);
+            captureCtx.rotate(270 * Math.PI / 180);
+            captureCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+            captureCtx.restore();
             
             // Konversi ke blob dan download
             if (captureCanvas.toBlob) {
@@ -519,10 +589,9 @@
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    showStatus('Foto berhasil diambil dan disimpan!', 'success');
+                    showStatus('Foto berhasil diambil dengan rotasi 270°!', 'success');
                 });
             } else {
-                // Fallback untuk browser yang tidak support toBlob
                 var dataUrl = captureCanvas.toDataURL('image/png');
                 var a = document.createElement('a');
                 a.href = dataUrl;
@@ -540,32 +609,34 @@
             statusMsg.className = 'status ' + type;
         }
 
-        // Rotasi video
-        function rotateVideo() {
-            var rotation = rotateSelect.value;
-            currentRotation = rotation;
-            
-            // Hapus semua class rotasi
-            video.className = '';
-            
-            // Tambahkan class rotasi yang dipilih
-            if (rotation !== 'normal') {
-                video.classList.add(rotation);
-            }
-            
-            showStatus('Rotasi diterapkan: ' + rotateSelect.options[rotateSelect.selectedIndex].text, 'success');
-        }
-
         // Event listeners
         startBtn.addEventListener('click', startCamera);
         stopBtn.addEventListener('click', stopCamera);
         captureBtn.addEventListener('click', capturePhoto);
         switchBtn.addEventListener('click', switchCamera);
-        rotateSelect.addEventListener('change', rotateVideo);
+        
+        faceDetectionToggle.addEventListener('change', function() {
+            isFaceDetectionEnabled = this.checked;
+            if (stream) {
+                if (isFaceDetectionEnabled) {
+                    startFaceDetection();
+                } else {
+                    stopFaceDetection();
+                }
+            }
+        });
         
         cameraSelect.addEventListener('change', function() {
             if (stream) {
                 startCamera();
+            }
+        });
+
+        // Resize canvas saat window resize
+        window.addEventListener('resize', function() {
+            if (stream) {
+                canvas.width = video.offsetWidth;
+                canvas.height = video.offsetHeight;
             }
         });
 
