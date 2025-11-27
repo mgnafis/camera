@@ -2,8 +2,8 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Kamera Web</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tes Kamera Web</title>
     <style>
         * {
             margin: 0;
@@ -12,144 +12,162 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            padding: 10px;
         }
 
         .container {
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             overflow: hidden;
-            max-width: 800px;
-            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #4CAF50;
             color: white;
-            padding: 20px;
+            padding: 15px;
             text-align: center;
         }
 
         .header h1 {
-            font-size: 24px;
-            margin-bottom: 5px;
+            font-size: 20px;
         }
 
-        .header p {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        .video-container {
+        .video-wrapper {
             position: relative;
             background: #000;
             width: 100%;
-            padding-top: 75%; /* 4:3 Aspect Ratio */
         }
 
         #video {
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
-            height: 100%;
-            object-fit: cover;
+            height: auto;
+            display: block;
+            max-height: 480px;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            background: rgba(0,0,0,0.7);
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
         }
 
         .controls {
-            padding: 20px;
-            background: #f8f9fa;
+            padding: 15px;
         }
 
-        .camera-select {
-            width: 100%;
-            padding: 12px;
+        .form-group {
             margin-bottom: 15px;
-            border: 2px solid #667eea;
-            border-radius: 10px;
-            font-size: 16px;
-            background: white;
-            cursor: pointer;
-            transition: all 0.3s;
         }
 
-        .camera-select:focus {
-            outline: none;
-            border-color: #764ba2;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            flex: 1;
-            min-width: 120px;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .status {
-            margin-top: 15px;
-            padding: 12px;
-            border-radius: 10px;
-            text-align: center;
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
             font-size: 14px;
         }
 
-        .status.info {
-            background: #d1ecf1;
-            color: #0c5460;
+        select, button {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
         }
 
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
+        select {
+            cursor: pointer;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="black" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 30px;
+        }
+
+        button {
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 8px;
+            border: none;
+        }
+
+        .btn-start {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-start:active {
+            background: #45a049;
+        }
+
+        .btn-stop {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-stop:active {
+            background: #da190b;
+        }
+
+        .btn-capture {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-capture:active {
+            background: #0b7dda;
+        }
+
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .info {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .info-table {
+            width: 100%;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        .info-table td {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-table td:first-child {
+            font-weight: bold;
+            width: 40%;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-align: center;
         }
 
         .status.success {
@@ -157,57 +175,72 @@
             color: #155724;
         }
 
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
         canvas {
             display: none;
         }
 
-        @media (max-width: 600px) {
-            .header h1 {
-                font-size: 20px;
-            }
-
-            .btn {
-                min-width: 100px;
-                padding: 10px 15px;
-                font-size: 14px;
-            }
-
-            .controls {
-                padding: 15px;
-            }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📸 Aplikasi Kamera Web</h1>
-            <p>Pilih kamera dan mulai streaming</p>
+            <h1>📷 Tes Kamera Web</h1>
         </div>
 
-        <div class="video-container">
-            <video id="video" autoplay playsinline></video>
+        <div class="video-wrapper">
+            <video id="video" autoplay playsinline muted></video>
+            <div id="overlay" class="overlay">
+                <p>Kamera belum aktif</p>
+                <p>Tekan "Mulai Kamera"</p>
+            </div>
         </div>
 
         <div class="controls">
-            <select id="cameraSelect" class="camera-select">
-                <option value="">Pilih Kamera...</option>
-            </select>
-
-            <div class="button-group">
-                <button id="startBtn" class="btn btn-primary">
-                    ▶️ Mulai Kamera
-                </button>
-                <button id="stopBtn" class="btn btn-secondary" disabled>
-                    ⏹️ Stop Kamera
-                </button>
-                <button id="captureBtn" class="btn btn-primary" disabled>
-                    📷 Ambil Foto
-                </button>
+            <div id="statusMsg" class="status info">
+                Tekan "Mulai Kamera" untuk memulai
             </div>
 
-            <div id="status" class="status info">
-                Klik "Mulai Kamera" untuk memulai
+            <div class="form-group">
+                <label for="cameraSelect">Pilih Kamera:</label>
+                <select id="cameraSelect">
+                    <option value="">Kamera Default</option>
+                </select>
+            </div>
+
+            <button id="startBtn" class="btn-start">▶ Mulai Kamera</button>
+            <button id="switchBtn" class="btn-start hidden">🔄 Ganti Kamera</button>
+            <button id="stopBtn" class="btn-stop" disabled>⏹ Stop Kamera</button>
+            <button id="captureBtn" class="btn-capture" disabled>📷 Ambil Foto</button>
+
+            <div class="info">
+                <strong>Informasi Kamera:</strong>
+                <table class="info-table">
+                    <tr>
+                        <td>Status:</td>
+                        <td id="infoStatus">Tidak aktif</td>
+                    </tr>
+                    <tr>
+                        <td>Resolusi:</td>
+                        <td id="infoResolution">-</td>
+                    </tr>
+                    <tr>
+                        <td>Kamera:</td>
+                        <td id="infoCamera">-</td>
+                    </tr>
+                </table>
             </div>
         </div>
     </div>
@@ -215,134 +248,239 @@
     <canvas id="canvas"></canvas>
 
     <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const cameraSelect = document.getElementById('cameraSelect');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const captureBtn = document.getElementById('captureBtn');
-        const status = document.getElementById('status');
+        // Variabel global
+        var video = document.getElementById('video');
+        var canvas = document.getElementById('canvas');
+        var cameraSelect = document.getElementById('cameraSelect');
+        var startBtn = document.getElementById('startBtn');
+        var switchBtn = document.getElementById('switchBtn');
+        var stopBtn = document.getElementById('stopBtn');
+        var captureBtn = document.getElementById('captureBtn');
+        var overlay = document.getElementById('overlay');
+        var statusMsg = document.getElementById('statusMsg');
+        
+        var stream = null;
+        var cameras = [];
+        var currentCameraIndex = 0;
+        var facingMode = 'user'; // 'user' untuk depan, 'environment' untuk belakang
 
-        let stream = null;
-        let cameras = [];
-
-        // Fungsi untuk mendapatkan daftar kamera
-        async function getCameras() {
-            try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                cameras = devices.filter(device => device.kind === 'videoinput');
+        // Cek dukungan browser
+        function checkBrowserSupport() {
+            var isSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+            
+            if (!isSupported) {
+                // Fallback untuk browser lama
+                navigator.getUserMedia = navigator.getUserMedia ||
+                    navigator.webkitGetUserMedia ||
+                    navigator.mozGetUserMedia ||
+                    navigator.msGetUserMedia;
                 
-                cameraSelect.innerHTML = '<option value="">Pilih Kamera...</option>';
-                
-                cameras.forEach((camera, index) => {
-                    const option = document.createElement('option');
-                    option.value = camera.deviceId;
-                    option.text = camera.label || `Kamera ${index + 1}`;
-                    cameraSelect.appendChild(option);
-                });
-
-                if (cameras.length === 0) {
-                    showStatus('Tidak ada kamera yang ditemukan', 'error');
-                } else {
-                    showStatus(`${cameras.length} kamera ditemukan`, 'success');
+                if (navigator.getUserMedia) {
+                    isSupported = true;
                 }
-            } catch (err) {
-                showStatus('Error mendapatkan daftar kamera: ' + err.message, 'error');
+            }
+            
+            return isSupported;
+        }
+
+        // Inisialisasi
+        function init() {
+            overlay.style.display = 'flex';
+            
+            if (!checkBrowserSupport()) {
+                showStatus('Browser Anda tidak mendukung akses kamera. Silakan gunakan browser yang lebih baru seperti Chrome, Firefox, atau Safari.', 'error');
+                startBtn.disabled = true;
+                return;
+            }
+            
+            getCameras();
+        }
+
+        // Mendapatkan daftar kamera
+        function getCameras() {
+            if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+                navigator.mediaDevices.enumerateDevices()
+                    .then(function(devices) {
+                        cameras = devices.filter(function(device) {
+                            return device.kind === 'videoinput';
+                        });
+                        
+                        if (cameras.length > 0) {
+                            cameraSelect.innerHTML = '';
+                            cameras.forEach(function(camera, index) {
+                                var option = document.createElement('option');
+                                option.value = index;
+                                option.text = camera.label || 'Kamera ' + (index + 1);
+                                cameraSelect.appendChild(option);
+                            });
+                            
+                            // Tampilkan tombol switch jika ada lebih dari 1 kamera
+                            if (cameras.length > 1) {
+                                switchBtn.classList.remove('hidden');
+                            }
+                        }
+                    })
+                    .catch(function(err) {
+                        console.log('Error mendapatkan kamera:', err);
+                    });
             }
         }
 
-        // Fungsi untuk memulai kamera
-        async function startCamera(deviceId) {
-            try {
-                // Stop kamera yang sedang berjalan
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
+        // Memulai kamera dengan constraints yang kompatibel
+        function startCamera() {
+            var constraints = {
+                video: {
+                    facingMode: facingMode,
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                },
+                audio: false
+            };
 
-                const constraints = {
-                    video: {
-                        deviceId: deviceId ? { exact: deviceId } : undefined,
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
-                    audio: false
+            // Jika ada kamera terpilih di dropdown
+            if (cameras.length > 0 && cameraSelect.value !== '') {
+                var selectedIndex = parseInt(cameraSelect.value);
+                if (cameras[selectedIndex]) {
+                    constraints.video.deviceId = { exact: cameras[selectedIndex].deviceId };
+                    delete constraints.video.facingMode;
+                }
+            }
+
+            // Stop stream lama jika ada
+            if (stream) {
+                stream.getTracks().forEach(function(track) {
+                    track.stop();
+                });
+            }
+
+            // Gunakan API yang tepat sesuai browser
+            var getUserMedia = (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ?
+                function(constraints) {
+                    return navigator.mediaDevices.getUserMedia(constraints);
+                } :
+                function(constraints) {
+                    return new Promise(function(resolve, reject) {
+                        navigator.getUserMedia(constraints, resolve, reject);
+                    });
                 };
 
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = stream;
-
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                captureBtn.disabled = false;
-                cameraSelect.disabled = false;
-
-                showStatus('Kamera aktif', 'success');
-            } catch (err) {
-                showStatus('Error mengakses kamera: ' + err.message, 'error');
-                console.error(err);
-            }
+            getUserMedia(constraints)
+                .then(function(mediaStream) {
+                    stream = mediaStream;
+                    
+                    // Set video source
+                    if ('srcObject' in video) {
+                        video.srcObject = stream;
+                    } else {
+                        // Fallback untuk browser lama
+                        video.src = window.URL.createObjectURL(stream);
+                    }
+                    
+                    video.onloadedmetadata = function() {
+                        overlay.style.display = 'none';
+                        startBtn.disabled = true;
+                        stopBtn.disabled = false;
+                        captureBtn.disabled = false;
+                        
+                        // Update info
+                        document.getElementById('infoStatus').textContent = 'Aktif';
+                        document.getElementById('infoResolution').textContent = 
+                            video.videoWidth + ' x ' + video.videoHeight;
+                        document.getElementById('infoCamera').textContent = 
+                            cameras[cameraSelect.value] ? 
+                            (cameras[cameraSelect.value].label || 'Kamera ' + (parseInt(cameraSelect.value) + 1)) : 
+                            'Kamera Default';
+                        
+                        showStatus('Kamera aktif! Resolusi: ' + video.videoWidth + 'x' + video.videoHeight, 'success');
+                    };
+                })
+                .catch(function(err) {
+                    console.error('Error mengakses kamera:', err);
+                    overlay.style.display = 'flex';
+                    showStatus('Gagal mengakses kamera: ' + err.message + '. Pastikan Anda memberikan izin akses kamera.', 'error');
+                });
         }
 
-        // Fungsi untuk stop kamera
+        // Stop kamera
         function stopCamera() {
             if (stream) {
-                stream.getTracks().forEach(track => track.stop());
+                stream.getTracks().forEach(function(track) {
+                    track.stop();
+                });
                 video.srcObject = null;
                 stream = null;
-
+                
+                overlay.style.display = 'flex';
                 startBtn.disabled = false;
                 stopBtn.disabled = true;
                 captureBtn.disabled = true;
-
+                
+                document.getElementById('infoStatus').textContent = 'Tidak aktif';
+                document.getElementById('infoResolution').textContent = '-';
+                
                 showStatus('Kamera dihentikan', 'info');
             }
         }
 
-        // Fungsi untuk capture foto
+        // Ganti kamera (untuk mobile)
+        function switchCamera() {
+            facingMode = facingMode === 'user' ? 'environment' : 'user';
+            startCamera();
+        }
+
+        // Ambil foto
         function capturePhoto() {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
+            var ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
-
-            // Download foto
-            canvas.toBlob(blob => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `foto_${Date.now()}.png`;
+            
+            // Konversi ke blob dan download
+            if (canvas.toBlob) {
+                canvas.toBlob(function(blob) {
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'foto_' + new Date().getTime() + '.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showStatus('Foto berhasil diambil dan disimpan!', 'success');
+                });
+            } else {
+                // Fallback untuk browser yang tidak support toBlob
+                var dataUrl = canvas.toDataURL('image/png');
+                var a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = 'foto_' + new Date().getTime() + '.png';
+                document.body.appendChild(a);
                 a.click();
-                URL.revokeObjectURL(url);
+                document.body.removeChild(a);
                 showStatus('Foto berhasil diambil!', 'success');
-            });
+            }
         }
 
-        // Fungsi untuk menampilkan status
+        // Tampilkan status
         function showStatus(message, type) {
-            status.textContent = message;
-            status.className = `status ${type}`;
+            statusMsg.textContent = message;
+            statusMsg.className = 'status ' + type;
         }
 
         // Event listeners
-        startBtn.addEventListener('click', () => {
-            const selectedCamera = cameraSelect.value;
-            startCamera(selectedCamera || undefined);
-        });
-
+        startBtn.addEventListener('click', startCamera);
         stopBtn.addEventListener('click', stopCamera);
         captureBtn.addEventListener('click', capturePhoto);
-
-        cameraSelect.addEventListener('change', (e) => {
-            if (stream && e.target.value) {
-                startCamera(e.target.value);
+        switchBtn.addEventListener('click', switchCamera);
+        
+        cameraSelect.addEventListener('change', function() {
+            if (stream) {
+                startCamera();
             }
         });
 
-        // Inisialisasi - dapatkan daftar kamera saat halaman dimuat
-        getCameras();
-
-        // Update daftar kamera jika ada perubahan device
-        navigator.mediaDevices.addEventListener('devicechange', getCameras);
+        // Inisialisasi saat halaman dimuat
+        init();
     </script>
 </body>
 </html>
