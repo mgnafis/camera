@@ -48,6 +48,27 @@
             height: auto;
             display: block;
             max-height: 480px;
+            transition: transform 0.3s ease;
+        }
+
+        #video.rotate-90 {
+            transform: rotate(90deg);
+        }
+
+        #video.rotate-180 {
+            transform: rotate(180deg);
+        }
+
+        #video.rotate-270 {
+            transform: rotate(270deg);
+        }
+
+        #video.flip-h {
+            transform: scaleX(-1);
+        }
+
+        #video.flip-v {
+            transform: scaleY(-1);
         }
 
         .overlay {
@@ -225,6 +246,18 @@
             <button id="stopBtn" class="btn-stop" disabled>⏹ Stop Kamera</button>
             <button id="captureBtn" class="btn-capture" disabled>📷 Ambil Foto</button>
 
+            <div class="form-group">
+                <label for="rotateSelect">Rotasi & Flip Layar:</label>
+                <select id="rotateSelect">
+                    <option value="normal">Normal</option>
+                    <option value="rotate-90">Putar 90°</option>
+                    <option value="rotate-180">Putar 180°</option>
+                    <option value="rotate-270">Putar 270°</option>
+                    <option value="flip-h">Flip Horizontal (Mirror)</option>
+                    <option value="flip-v">Flip Vertikal</option>
+                </select>
+            </div>
+
             <div class="info">
                 <strong>Informasi Kamera:</strong>
                 <table class="info-table">
@@ -252,6 +285,7 @@
         var video = document.getElementById('video');
         var canvas = document.getElementById('canvas');
         var cameraSelect = document.getElementById('cameraSelect');
+        var rotateSelect = document.getElementById('rotateSelect');
         var startBtn = document.getElementById('startBtn');
         var switchBtn = document.getElementById('switchBtn');
         var stopBtn = document.getElementById('stopBtn');
@@ -263,6 +297,7 @@
         var cameras = [];
         var currentCameraIndex = 0;
         var facingMode = 'user'; // 'user' untuk depan, 'environment' untuk belakang
+        var currentRotation = 'normal';
 
         // Cek dukungan browser
         function checkBrowserSupport() {
@@ -430,14 +465,52 @@
 
         // Ambil foto
         function capturePhoto() {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            var ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
+            var captureCanvas = document.createElement('canvas');
+            var rotation = currentRotation;
+            
+            // Atur ukuran canvas sesuai rotasi
+            if (rotation === 'rotate-90' || rotation === 'rotate-270') {
+                captureCanvas.width = video.videoHeight;
+                captureCanvas.height = video.videoWidth;
+            } else {
+                captureCanvas.width = video.videoWidth;
+                captureCanvas.height = video.videoHeight;
+            }
+            
+            var ctx = captureCanvas.getContext('2d');
+            
+            // Terapkan transformasi sesuai rotasi
+            ctx.save();
+            
+            if (rotation === 'rotate-90') {
+                ctx.translate(captureCanvas.width, 0);
+                ctx.rotate(90 * Math.PI / 180);
+            } else if (rotation === 'rotate-180') {
+                ctx.translate(captureCanvas.width, captureCanvas.height);
+                ctx.rotate(180 * Math.PI / 180);
+            } else if (rotation === 'rotate-270') {
+                ctx.translate(0, captureCanvas.height);
+                ctx.rotate(270 * Math.PI / 180);
+            } else if (rotation === 'flip-h') {
+                ctx.translate(captureCanvas.width, 0);
+                ctx.scale(-1, 1);
+            } else if (rotation === 'flip-v') {
+                ctx.translate(0, captureCanvas.height);
+                ctx.scale(1, -1);
+            }
+            
+            // Gambar video ke canvas
+            if (rotation === 'rotate-90' || rotation === 'rotate-270') {
+                ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+            } else {
+                ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+            }
+            
+            ctx.restore();
             
             // Konversi ke blob dan download
-            if (canvas.toBlob) {
-                canvas.toBlob(function(blob) {
+            if (captureCanvas.toBlob) {
+                captureCanvas.toBlob(function(blob) {
                     var url = URL.createObjectURL(blob);
                     var a = document.createElement('a');
                     a.href = url;
@@ -450,7 +523,7 @@
                 });
             } else {
                 // Fallback untuk browser yang tidak support toBlob
-                var dataUrl = canvas.toDataURL('image/png');
+                var dataUrl = captureCanvas.toDataURL('image/png');
                 var a = document.createElement('a');
                 a.href = dataUrl;
                 a.download = 'foto_' + new Date().getTime() + '.png';
@@ -467,11 +540,28 @@
             statusMsg.className = 'status ' + type;
         }
 
+        // Rotasi video
+        function rotateVideo() {
+            var rotation = rotateSelect.value;
+            currentRotation = rotation;
+            
+            // Hapus semua class rotasi
+            video.className = '';
+            
+            // Tambahkan class rotasi yang dipilih
+            if (rotation !== 'normal') {
+                video.classList.add(rotation);
+            }
+            
+            showStatus('Rotasi diterapkan: ' + rotateSelect.options[rotateSelect.selectedIndex].text, 'success');
+        }
+
         // Event listeners
         startBtn.addEventListener('click', startCamera);
         stopBtn.addEventListener('click', stopCamera);
         captureBtn.addEventListener('click', capturePhoto);
         switchBtn.addEventListener('click', switchCamera);
+        rotateSelect.addEventListener('change', rotateVideo);
         
         cameraSelect.addEventListener('change', function() {
             if (stream) {
