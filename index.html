@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Kamera Web</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            width: 100%;
+            padding-top: 75%; /* 4:3 Aspect Ratio */
+        }
+
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .camera-select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .camera-select:focus {
+            outline: none;
+            border-color: #764ba2;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .btn {
+                min-width: 100px;
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+
+            .controls {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📸 Aplikasi Kamera Web</h1>
+            <p>Pilih kamera dan mulai streaming</p>
+        </div>
+
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+        </div>
+
+        <div class="controls">
+            <select id="cameraSelect" class="camera-select">
+                <option value="">Pilih Kamera...</option>
+            </select>
+
+            <div class="button-group">
+                <button id="startBtn" class="btn btn-primary">
+                    ▶️ Mulai Kamera
+                </button>
+                <button id="stopBtn" class="btn btn-secondary" disabled>
+                    ⏹️ Stop Kamera
+                </button>
+                <button id="captureBtn" class="btn btn-primary" disabled>
+                    📷 Ambil Foto
+                </button>
+            </div>
+
+            <div id="status" class="status info">
+                Klik "Mulai Kamera" untuk memulai
+            </div>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const cameraSelect = document.getElementById('cameraSelect');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const status = document.getElementById('status');
+
+        let stream = null;
+        let cameras = [];
+
+        // Fungsi untuk mendapatkan daftar kamera
+        async function getCameras() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                cameras = devices.filter(device => device.kind === 'videoinput');
+                
+                cameraSelect.innerHTML = '<option value="">Pilih Kamera...</option>';
+                
+                cameras.forEach((camera, index) => {
+                    const option = document.createElement('option');
+                    option.value = camera.deviceId;
+                    option.text = camera.label || `Kamera ${index + 1}`;
+                    cameraSelect.appendChild(option);
+                });
+
+                if (cameras.length === 0) {
+                    showStatus('Tidak ada kamera yang ditemukan', 'error');
+                } else {
+                    showStatus(`${cameras.length} kamera ditemukan`, 'success');
+                }
+            } catch (err) {
+                showStatus('Error mendapatkan daftar kamera: ' + err.message, 'error');
+            }
+        }
+
+        // Fungsi untuk memulai kamera
+        async function startCamera(deviceId) {
+            try {
+                // Stop kamera yang sedang berjalan
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+
+                const constraints = {
+                    video: {
+                        deviceId: deviceId ? { exact: deviceId } : undefined,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                captureBtn.disabled = false;
+                cameraSelect.disabled = false;
+
+                showStatus('Kamera aktif', 'success');
+            } catch (err) {
+                showStatus('Error mengakses kamera: ' + err.message, 'error');
+                console.error(err);
+            }
+        }
+
+        // Fungsi untuk stop kamera
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                stream = null;
+
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                captureBtn.disabled = true;
+
+                showStatus('Kamera dihentikan', 'info');
+            }
+        }
+
+        // Fungsi untuk capture foto
+        function capturePhoto() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            // Download foto
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `foto_${Date.now()}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showStatus('Foto berhasil diambil!', 'success');
+            });
+        }
+
+        // Fungsi untuk menampilkan status
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        // Event listeners
+        startBtn.addEventListener('click', () => {
+            const selectedCamera = cameraSelect.value;
+            startCamera(selectedCamera || undefined);
+        });
+
+        stopBtn.addEventListener('click', stopCamera);
+        captureBtn.addEventListener('click', capturePhoto);
+
+        cameraSelect.addEventListener('change', (e) => {
+            if (stream && e.target.value) {
+                startCamera(e.target.value);
+            }
+        });
+
+        // Inisialisasi - dapatkan daftar kamera saat halaman dimuat
+        getCameras();
+
+        // Update daftar kamera jika ada perubahan device
+        navigator.mediaDevices.addEventListener('devicechange', getCameras);
+    </script>
+</body>
+</html>
